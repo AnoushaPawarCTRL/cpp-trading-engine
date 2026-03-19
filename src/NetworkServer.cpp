@@ -1,5 +1,6 @@
 #include "NetworkServer.h"
 #include "LockFreeQueue.h"
+#include "OrderBook.h"
 
 #include <winsock2.h>
 #include <iostream>
@@ -9,50 +10,55 @@
 
 extern LockFreeQueue<Order> orderQueue;
 
+void receiveOrderFromAPI(const std::string& signal, int qty, double price)
+{
+    OrderType type = signal == "BUY" ? OrderType::BUY : OrderType::SELL;
+    static int idCounter = 1;
+    orderQueue.enqueue(Order(idCounter++, type, price, qty));
+}
+
 void startServer()
 {
     WSADATA wsa;
     WSAStartup(MAKEWORD(2,2), &wsa);
 
-    SOCKET serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+    SOCKET server_fd = socket(AF_INET, SOCK_STREAM, 0);
 
-    sockaddr_in serverAddr;
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(9000);
-    serverAddr.sin_addr.s_addr = INADDR_ANY;
+    sockaddr_in address;
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons(9000);
 
-    bind(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr));
+    bind(server_fd, (sockaddr*)&address, sizeof(address));
+    listen(server_fd, 3);
 
-    listen(serverSocket, 5);
+    std::cout << "C++ Engine listening on port 9000...\n";
 
-    std::cout << "Trading Gateway Listening on port 9000\n";
-
-    while(true)
+    while (true)
     {
-        SOCKET client = accept(serverSocket, nullptr, nullptr);
+        SOCKET new_socket = accept(server_fd, NULL, NULL);
 
-        char buffer[1024];
-        int bytes = recv(client, buffer, sizeof(buffer), 0);
+        char buffer[1024] = {0};
+        int valread = recv(new_socket, buffer, 1024, 0);
 
-        if(bytes > 0)
-        {
-            std::stringstream ss(buffer);
+        std::string msg(buffer);
 
-            int id, qty;
-            double price;
-            int type;
+        std::stringstream ss(msg);
+        std::string type;
+        int qty;
+        double price;
 
-            ss >> id >> type >> price >> qty;
+        ss >> type >> qty >> price;
 
-            OrderType orderType = (type == 0) ? OrderType::BUY : OrderType::SELL;
+        OrderType orderType = (type == "BUY") ? OrderType::BUY : OrderType::SELL;
 
-            Order order(id, orderType, price, qty);
+        static int id = 1;
+        orderQueue.enqueue(Order(id++, orderType, price, qty));
 
-            while(!orderQueue.enqueue(order)) {}
+        std::cout << "Received from Node: " << msg << std::endl;
 
-            std::cout << "Order received from network\n";
-        }
-
-        closesocket(client);
+        closesocket(new_socket);
     }
+
+    WSACleanup();
 }
