@@ -1,180 +1,136 @@
-# Low-Latency C++ Trading Engine
-
-A high-performance simulated electronic trading engine written in **C++** that models the architecture of modern financial exchanges.
-The project demonstrates **concurrency, lock-free data structures, networking, and order book mechanics** used in real-world trading systems.
-
----
+# C++ Trading Engine (Low-Latency + Distributed System)
 
 ## Overview
 
-Electronic exchanges process millions of orders per second with extremely low latency.
-This project simulates a simplified exchange architecture including:
+This project started as a simple C++ order matching engine and gradually evolved into a more realistic **trading system simulation**.
 
-* Multi-threaded order generation
-* Lock-free order queues
-* Matching engine
-* Real-time order book
-* TCP trading gateway
-* Live market depth visualization
+It now includes:
 
-The system is designed to demonstrate core concepts behind **high-frequency trading infrastructure** and **low-latency system design**.
+* A multi-threaded C++ matching engine
+* A live order book (L1 / L2 / L3)
+* A Python signal generator
+* A Node.js API layer
+* Real-time communication using TCP sockets
 
----
-
-## System Architecture
-
-Client / Order Generator
-↓
-TCP Network Gateway
-↓
-Lock-Free Order Queue
-↓
-Matching Engine
-↓
-Order Book (L1 / L2 / L3)
-
-Orders are produced by multiple threads and placed into a lock-free queue before being processed by the matching engine.
+The goal was to build something closer to how actual trading systems are structured, rather than just a standalone program.
 
 ---
 
-## Order Book Model
+## Architecture
 
-The engine implements three levels of market data commonly used in financial exchanges:
+```
+Python (signals) → Node.js API → TCP → C++ Engine
+```
 
-### Level 1 — Best Bid / Offer (BBO)
-
-Displays the top of book:
-
-* Best bid price
-* Best ask price
-
-Example:
-
-Bid: 101.20
-Ask: 101.25
+* Python simulates incoming trade signals
+* Node.js acts as a middle layer
+* C++ handles execution and order matching
 
 ---
 
-### Level 2 — Market by Price
+## Features
 
-Aggregated liquidity at each price level.
+* Multi-threaded order processing
 
-Example:
+* Lock-free queue for high throughput
 
-BIDS
-101.20 | 500
-101.15 | 210
+* Real-time order matching
 
-ASKS
-101.25 | 300
-101.30 | 120
+* Market depth display:
 
----
+  * L1: Best bid/ask + spread
+  * L2: Aggregated price levels
+  * L3: Individual orders
 
-### Level 3 — Market by Order
-
-Individual orders are maintained per price level.
-
-Example:
-
-Price: 101.20
-OrderID 101 | Qty 200
-OrderID 102 | Qty 300
-
-This engine internally maintains **Level 3 data**, from which L2 and L1 views are derived.
+* TCP socket communication between services
 
 ---
 
-## Key Components
+## Tech Stack
 
-### Matching Engine
-
-Processes incoming orders and matches buy and sell orders using price-time priority.
-
-### Lock-Free Queue
-
-Used to pass orders from producer threads to the matching engine with minimal contention.
-
-### Multi-threaded Order Simulation
-
-Multiple threads simulate market participants generating orders.
-
-### TCP Trading Gateway
-
-Orders can be received through a socket interface, similar to real exchange gateways.
-
-### Live Market Depth Display
-
-Console visualization of the evolving order book showing bid and ask liquidity.
+* C++ (core engine)
+* Python (signal generation)
+* Node.js + Express (API layer)
+* TCP sockets (network communication)
 
 ---
 
-## Technologies Used
+## How to run
 
-* C++
-* Multithreading (`std::thread`)
-* Lock-free data structures
-* TCP sockets (WinSock)
-* Concurrent programming techniques
+### 1. Compile the engine
+
+```bash
+g++ -Iinclude src/main.cpp src/OrderBook.cpp src/NetworkServer.cpp -lws2_32 -o build/trading_engine
+```
 
 ---
 
-## Example Output
+### 2. Start the C++ engine
 
+```bash
+./build/trading_engine
+```
+
+---
+
+### 3. Start the Node server
+
+```bash
+cd node
+npm install
+node server.js
+```
+
+---
+
+### 4. Run the signal generator
+
+```bash
+cd python
+python signal_generator.py
+```
+
+---
+
+## Example output
+
+```
 ------ MARKET DEPTH ------
 
+BEST BID: 101.10 | BEST ASK: 101.23 | SPREAD: 0.13
+
 ASKS
-101.25 | 300
-101.30 | 120
+101.23 | 340
+101.45 | 120
 
 BIDS
-101.20 | 500
-101.15 | 210
+101.10 | 500
+100.95 | 310
+```
 
 ---
 
-## Build Instructions
+## Why I built this
 
-Compile using g++:
+I wanted to go beyond typical projects and build something that shows:
 
-g++ -Iinclude src/main.cpp src/OrderBook.cpp src/NetworkServer.cpp -lws2_32 -o build/trading_engine
-
----
-
-## Running the Engine
-
-Start the trading engine:
-
-./build/trading_engine
-
-The engine will simulate live market activity and display real-time market depth.
+* understanding of low-latency systems
+* how trading engines actually work
+* how different components communicate in real systems
 
 ---
 
-## Learning Goals
+## Next steps / ideas
 
-This project was built to explore:
-
-* Low-latency systems design
-* Exchange matching engines
-* Concurrent programming
-* Order book mechanics
-* Financial market infrastructure
+* Keep improving latency (persistent connections, better protocols)
+* Add a simple frontend to visualise the market
+* Replace random signals with ML-based predictions
+* Store and analyse data using a database
 
 ---
 
-## Future Improvements
+## Notes
 
-Potential extensions:
-
-* FIX protocol order gateway
-* WebSocket market data feed
-* Persistent order logging
-* Latency benchmarking
-* GUI market visualization
+This is a simulation, not a real trading system, but the structure is inspired by how real systems are designed.
 
 ---
-
-## Author
-
-Systems project focused on **high-performance financial infrastructure and trading system design**.
